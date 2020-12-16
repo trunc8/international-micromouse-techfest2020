@@ -1,7 +1,7 @@
 <launch>
 
-    <param name="robot_description" command="cat '$(find pkg_techfest_imc)/urdf/micromouse_robot.xacro'" />
-
+    <arg name="model" default="$(find pkg_techfest_imc)/urdf/micromouse_robot.xacro"/>
+    <param name="robot_description" command="$(find xacro)/xacro.py $(arg model)" />
     <!-- send fake joint values -->
     <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
         <param name="use_gui" value="False"/>
