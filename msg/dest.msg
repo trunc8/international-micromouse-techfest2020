@@ -1,0 +1,2 @@
+float64 dest_x_coordinate
+float64 dest_y_coordinate
