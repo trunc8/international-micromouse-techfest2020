@@ -8,6 +8,7 @@ from math import pow,sqrt,atan2
 from std_msgs.msg import Float32
 from std_msgs.msg import Float64
 from mybot_description.msg import dest
+import sys
 
 class gtg_controller():
     def __init__(self):
@@ -19,8 +20,10 @@ class gtg_controller():
         self.theta_pub = rospy.Publisher("/theota" , Float32 , queue_size = 1)
         rospy.Subscriber('/odom', Odometry , self.odom_callback)
         rospy.Subscriber('/dest' , dest , self.goal_pose_callback , queue_size = 1 , buff_size = 40)
-        
-        self.goal = [0.0 , 0.0]
+        self.ack_pub = rospy.Publisher('/acknowledge', Float32 , queue_size=1)
+
+        #self.prev_goal = [0.0 , 0.0]
+        self.goal = [-1.0 , -1.36]
         self.current_pose = [0.0 , 0.0 , 0.0]  #x,y,theta
         self.current_orientation_euler = [0.0 , 0.0 , 0.0 ]
         self.current_orientation_quaternion = [0.0 , 0.0 , 0.0 , 0.0]
@@ -47,6 +50,8 @@ class gtg_controller():
         self.reached_x = False
         self.reached_y = False
 
+        self.publishing_rate = rospy.Rate(20)
+
     def odom_callback(self,msg):
         self.current_pose[0] = msg.pose.pose.position.x
         self.current_pose[1] = msg.pose.pose.position.y
@@ -58,43 +63,66 @@ class gtg_controller():
         (self.current_orientation_euler[1] , self.current_orientation_euler[0] , self.current_orientation_euler[2]) = euler_from_quaternion([self.current_orientation_quaternion[0] , self.current_orientation_quaternion[1] , self.current_orientation_quaternion[2] , self.current_orientation_quaternion[3]])
         self.current_pose[2] = self.current_orientation_euler[2]
 
-    def control(self):
+
+    def goal_theota(self):
+        self.goal_yaw = atan2(self.goal[1] - self.current_pose[1], self.goal[0] - self.current_pose[0])  
+        print("goal_YAW", self.goal_yaw)
+
         
+    def distance_from_goal(self , pose_x , pose_y , goal_x , goal_y):
+        distance = sqrt(pow((goal_x - pose_x), 2) + pow((goal_y - pose_y), 2))
+        return distance
+
+
+    def control(self):
+        #distance = self.distance_from_goal(self.current_pose[0] , self.current_pose[1] , self.goal[0] , self.goal[1])
         if self.goal[0] - self.current_pose[0] >= 0:
 
             if self.goal[0] - self.current_pose[0] > 0.1:
-                self.vel_x.linear.x = 0.4    
+                self.vel_x.linear.x = 0.4 #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
+                print("away from goal in X_111111111111111111")
             elif (self.goal[0] - self.current_pose[0]) <= 0.1 and (self.goal[0] - self.current_pose[0]) >= 0.005:
-                self.vel_x.linear.x = 4.0 * (self.goal[0] - self.current_pose[0])          
+                self.vel_x.linear.x = 4.0 * (self.goal[0] - self.current_pose[0])
+                print("getting close in X_11111111111")
             else:    
                 self.vel_x.linear.x = 0.0
+                print("Give next goal in X_111111")
                 self.reached_x = True
                    
         else:
             if self.goal[0] - self.current_pose[0] < -0.1:
-                self.vel_x.linear.x = -0.4 
+                self.vel_x.linear.x = -0.4 #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
+                print("away from goal in X_2222222222222")
             elif (self.goal[0] - self.current_pose[0]) >= -0.1 and (self.goal[0] - self.current_pose[0]) <= -0.005:
                 self.vel_x.linear.x = 4.0 * (self.goal[0] - self.current_pose[0])
+                print("getting close in X_222222222222")
             else:    
                 self.vel_x.linear.x = 0.0
+                print("Give next goal in X_2222222222")
                 self.reached_x = True    
 
         if self.goal[1] - self.current_pose[1] >= 0:
             if self.goal[1] - self.current_pose[1] > 0.01:
-                self.vel_y.linear.x = -0.4
+                self.vel_y.linear.x = -0.4 #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
+                print("away from goal in Y_111111111111")
             elif (self.goal[1] - self.current_pose[1]) <= 0.1 and (self.goal[1] - self.current_pose[1]) >= 0.005:
                 self.vel_y.linear.x = -4.0 * ((self.goal[1] - self.current_pose[1]))
+                print("getting close in Y_111111111111")
             else:    
                 self.vel_y.linear.x = -0.0  
+                print("give next goal in Y_11111111")
                 self.reached_y = True    
          
         else:
             if self.goal[1] - self.current_pose[1] < -0.1:
-                self.vel_y.linear.x = 0.4 
+                self.vel_y.linear.x = 0.4 #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
+                print("away from goal in Y_2222222222")
             elif (self.goal[1] - self.current_pose[1]) >= -0.1 and (self.goal[1] - self.current_pose[1]) <= -0.005:
                 self.vel_y.linear.x = -4.0 * ((self.goal[1] - self.current_pose[1]))
+                print("getting close in Y_222222222222")
             else:    
                 self.vel_y.linear.x = -0.0  
+                print("give next goal in Y_22222222222222")
                 self.reached_y = True     
         
 
@@ -116,21 +144,28 @@ class gtg_controller():
         self.goal[1] = msg.dest_y_coordinate
         
         print("call_back recieved")
-        self.publishing_rate = rospy.Rate(20)
+        
         print("ready to go to desination")
 
         self.reached_x = False
         self.reached_y = False
         while True:
             self.control()
-            if (self.reached_x and self.reached_y) :
-                print("brokeee")
-                break
             self.publishing_rate.sleep()
             
    
 if __name__ == "__main__":
     yo = gtg_controller()
+    args = rospy.myargv(argv=sys.argv)
+    if len(args) != 3:
+        print("Incoorect number of arguments")
+        sys.exit()
+
+    yo.goal[0] = float(args[1])
+    yo.goal[1] = float(args[2])   
+    while True:
+            yo.control()
+            yo.publishing_rate.sleep()
     rospy.spin()
     
 
