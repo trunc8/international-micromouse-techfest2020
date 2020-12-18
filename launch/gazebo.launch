@@ -29,6 +29,6 @@
   <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model"
         args="-x $(arg initial_position_micromouse_x) -y $(arg initial_position_micromouse_y) -z 0.08 -unpause -urdf -model robot -param robot_description" respawn="false" output="screen" />
 
-  
+   <node name="micromouse_centerline" pkg="pkg_techfest_imc" type="micromouse_gtg_centerline.py" args="$(arg initial_position_micromouse_x) $(arg initial_position_micromouse_y)"/>
 
 </launch>
