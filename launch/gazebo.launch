@@ -8,6 +8,9 @@
   <arg name="debug" default="false"/>
   <arg name="model" default="$(find pkg_techfest_imc)/urdf/micromouse_robot.xacro"/>
   <arg name="extra_gazebo_args" default="--verbose"/>
+  <arg name="initial_position_micromouse_x" default="0"/>
+  <arg name="initial_position_micromouse_y" default="0"/>	
+	
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="world_name" value="$(find pkg_techfest_imc)/world/my_arena.world"/>
@@ -20,14 +23,12 @@
   </include>
 
   <param name="robot_description" command="$(find xacro)/xacro.py $(arg model)" />
-  <rosparam file="$(find pkg_techfest_imc)/config/pos_control.yaml" command="load"/>
-  <node name="controller_spawner" pkg ="controller_manager" type="spawner" ns="/simple_model" args="base_to_second_joint_position_controller 		base_to_first_joint_position_controller  
-	joint_state_controller --shutdown-timeout 3"/>
+  
 
   <!-- push robot_description to factory and spawn robot in gazebo -->
   <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model"
-        args="-x 0 -y 0 -z 0.08 -unpause -urdf -model robot -param robot_description" respawn="false" output="screen" />
+        args="-x $(arg initial_position_micromouse_x) -y $(arg initial_position_micromouse_y) -z 0.08 -unpause -urdf -model robot -param robot_description" respawn="false" output="screen" />
 
-
+  
 
 </launch>
