@@ -7,7 +7,7 @@ from tf.transformations import euler_from_quaternion
 from math import pow,sqrt,atan2
 from std_msgs.msg import Float32
 from std_msgs.msg import Float64
-from mybot_description.msg import dest
+from pkg_techfest_imc.msg import dest
 import sys
 
 class gtg_controller():
