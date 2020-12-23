@@ -44,16 +44,18 @@ class gtg_controller():
         self.vel_y.angular.y = 0.0
         self.vel_y.angular.z = 0.0
 
-        self.sample_time = 0.05
+        self.sample_time = 0.1
         self.previous_theota = 0.0
 
         self.reached_x = False
         self.reached_y = False
 
-        self.publishing_rate = rospy.Rate(20)
+        self.publishing_rate = rospy.Rate(10)
 
-        self.max_speed = 0.3
+        self.max_speed = 0.4
         self.max_speed_scaled = self.max_speed*10
+        self.min_thresh = 0.01  #if distance to goal is btw 0.05 and 0.01, then p controller is used to prevent overshoot
+        self.max_thresh = 0.01  #min distance upto which the speed given to the bot is 0.4
 
     def odom_callback(self,msg):
         self.current_pose[0] = msg.pose.pose.position.x
@@ -81,34 +83,34 @@ class gtg_controller():
         #distance = self.distance_from_goal(self.current_pose[0] , self.current_pose[1] , self.goal[0] , self.goal[1])
         if self.goal[0] - self.current_pose[0] >= 0:
 
-            if self.goal[0] - self.current_pose[0] > 0.1:
+            if self.goal[0] - self.current_pose[0] > self.max_thresh:
                 self.vel_x.linear.x = self.max_speed #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
-                # print("away from goal in X_111111111111111111")
-            elif (self.goal[0] - self.current_pose[0]) <= 0.1 and (self.goal[0] - self.current_pose[0]) >= 0.005:
+                #print("away from goal in X_111111111111111111")
+            elif (self.goal[0] - self.current_pose[0]) <= self.max_thresh and (self.goal[0] - self.current_pose[0]) >= self.min_thresh:
                 self.vel_x.linear.x = self.max_speed_scaled * (self.goal[0] - self.current_pose[0])
-                # print("getting close in X_11111111111")
+                #print("getting close in X_11111111111")
             else:    
                 self.vel_x.linear.x = 0.0
-                # print("Give next goal in X_111111")
+                #print("Give next goal in X_111111")
                 self.reached_x = True
                    
         else:
-            if self.goal[0] - self.current_pose[0] < -0.1:
+            if self.goal[0] - self.current_pose[0] < (-1 * self.max_thresh):
                 self.vel_x.linear.x = -self.max_speed #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
-                # print("away from goal in X_2222222222222")
-            elif (self.goal[0] - self.current_pose[0]) >= -0.1 and (self.goal[0] - self.current_pose[0]) <= -0.005:
+                #print("away from goal in X_2222222222222")
+            elif (self.goal[0] - self.current_pose[0]) >= (-1 * self.max_thresh) and (self.goal[0] - self.current_pose[0]) <= (-1 * self.min_thresh):
                 self.vel_x.linear.x = self.max_speed_scaled * (self.goal[0] - self.current_pose[0])
-                # print("getting close in X_222222222222")
+                #print("getting close in X_222222222222")
             else:    
                 self.vel_x.linear.x = 0.0
-                # print("Give next goal in X_2222222222")
+                #print("Give next goal in X_2222222222")
                 self.reached_x = True    
 
         if self.goal[1] - self.current_pose[1] >= 0:
-            if self.goal[1] - self.current_pose[1] > 0.1:
+            if self.goal[1] - self.current_pose[1] > self.max_thresh:
                 self.vel_y.linear.x = -self.max_speed #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
                 # print("away from goal in Y_111111111111")
-            elif (self.goal[1] - self.current_pose[1]) <= 0.1 and (self.goal[1] - self.current_pose[1]) >= 0.005:
+            elif (self.goal[1] - self.current_pose[1]) <= self.max_thresh and (self.goal[1] - self.current_pose[1]) >= self.min_thresh:
                 self.vel_y.linear.x = -self.max_speed_scaled * ((self.goal[1] - self.current_pose[1]))
                 # print("getting close in Y_111111111111")
             else:    
@@ -117,10 +119,10 @@ class gtg_controller():
                 self.reached_y = True    
          
         else:
-            if self.goal[1] - self.current_pose[1] < -0.1:
+            if self.goal[1] - self.current_pose[1] < (-1 * self.max_thresh):
                 self.vel_y.linear.x = self.max_speed #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
                 # print("away from goal in Y_2222222222")
-            elif (self.goal[1] - self.current_pose[1]) >= -0.1 and (self.goal[1] - self.current_pose[1]) <= -0.005:
+            elif (self.goal[1] - self.current_pose[1]) >= (-1 * self.max_thresh) and (self.goal[1] - self.current_pose[1]) <= (-1 * self.min_thresh):
                 self.vel_y.linear.x = -self.max_speed_scaled * ((self.goal[1] - self.current_pose[1]))
                 # print("getting close in Y_222222222222")
             else:    
@@ -128,12 +130,28 @@ class gtg_controller():
                 # print("give next goal in Y_22222222222222")
                 self.reached_y = True     
         
-
+        '''#if round(abs(self.goal[0] - self.current_pose[0]), 2) == 0:
         if round(abs(self.current_pose[2]),4) != 0.0000:
             self.vel_x.angular.z = 2.5 * (-self.current_pose[2]) + 0.0000001 * ((-self.current_pose[2] + self.previous_theota)/self.sample_time)
             self.previous_theota = self.current_pose[2]
+            self.vel_x.angular.z = 0.0
+            self.vel_y.angular.z = 0.0
         else:
             self.vel_x.angular.z = 0.0  
+            self.vel_y.angular.z = 0.0
+        
+       ''' #if round(abs(self.goal[1] - self.current_pose[1]), 2) == 0:
+        if round(abs(self.current_pose[2]),4) != 0.0000:
+            self.vel_y.angular.z = 2.5 * (-self.current_pose[2]) + 0.0000001 * ((-self.current_pose[2] + self.previous_theota)/self.sample_time)
+            self.previous_theota = self.current_pose[2]
+                #self.vel_x.angular.z = 0.0
+            self.vel_x.angular.z = 0.0
+        else:
+            self.vel_x.angular.z = 0.0  
+            self.vel_y.angular.z = 0.0
+                
+        #else:
+         #   pass''''
 
         self.vel_x_pub.publish(self.vel_x)
         self.vel_y_pub.publish(self.vel_y)
