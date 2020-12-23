@@ -39,13 +39,13 @@
 
   <xacro:chassis name="link_chassis" len="0.07" wd="0.07" h="0.01" origin_xyz="0 0 0" origin_rpi="0 0 0" m="0.5" />
   <xacro:wheel_x name="link_left_wheel" h="0.01" r="0.015" m="0.2" />
-  <xacro:joint_wheel_x name="joint_left_wheel" parent="link_chassis" child="link_left_wheel" origin_xyz="0.041 0.0 0" />
+  <xacro:joint_wheel_x name="joint_left_wheel" parent="link_chassis" child="link_left_wheel" origin_xyz="0.032 0.0 0" />
   <xacro:wheel_x name="link_right_wheel" h="0.01" r="0.015" m="0.2" />
-  <xacro:joint_wheel_x name="joint_right_wheel" parent="link_chassis" child="link_right_wheel" origin_xyz="-0.041 0.0 0" />
+  <xacro:joint_wheel_x name="joint_right_wheel" parent="link_chassis" child="link_right_wheel" origin_xyz="-0.032 0.0 0" />
   <xacro:wheel_y name="link_front_wheel" h="0.01" r="0.015" m="0.2" />
-  <xacro:joint_wheel_y name="joint_front_wheel" parent="link_chassis" child="link_front_wheel" origin_xyz="0 0.041 0" />
+  <xacro:joint_wheel_y name="joint_front_wheel" parent="link_chassis" child="link_front_wheel" origin_xyz="0 0.032 0" />
   <xacro:wheel_y name="link_back_wheel" h="0.01" r="0.015" m="0.2" />
-  <xacro:joint_wheel_y name="joint_back_wheel" parent="link_chassis" child="link_back_wheel" origin_xyz="0 -0.041 0" />
+  <xacro:joint_wheel_y name="joint_back_wheel" parent="link_chassis" child="link_back_wheel" origin_xyz="0 -0.032 0" />
   
     
   
@@ -56,7 +56,7 @@
       <updateRate>20</updateRate>
       <leftJoint>joint_left_wheel</leftJoint>
       <rightJoint>joint_right_wheel</rightJoint>
-      <wheelSeparation>0.082</wheelSeparation>
+      <wheelSeparation>0.064</wheelSeparation>
       <wheelDiameter>0.03</wheelDiameter>
       <torque>10</torque>
       <commandTopic>cmd_vel_y</commandTopic>
@@ -71,7 +71,7 @@
       <updateRate>20</updateRate>
       <leftJoint>joint_front_wheel</leftJoint>
       <rightJoint>joint_back_wheel</rightJoint>
-      <wheelSeparation>0.082</wheelSeparation>
+      <wheelSeparation>0.064</wheelSeparation>
       <wheelDiameter>0.03</wheelDiameter>
       <torque>10</torque>
       <commandTopic>cmd_vel_x</commandTopic>
