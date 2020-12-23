@@ -52,6 +52,9 @@ class gtg_controller():
 
         self.publishing_rate = rospy.Rate(20)
 
+        self.max_speed = 0.3
+        self.max_speed_scaled = self.max_speed*10
+
     def odom_callback(self,msg):
         self.current_pose[0] = msg.pose.pose.position.x
         self.current_pose[1] = msg.pose.pose.position.y
@@ -66,7 +69,7 @@ class gtg_controller():
 
     def goal_theota(self):
         self.goal_yaw = atan2(self.goal[1] - self.current_pose[1], self.goal[0] - self.current_pose[0])  
-        print("goal_YAW", self.goal_yaw)
+        # print("goal_YAW", self.goal_yaw)
 
         
     def distance_from_goal(self , pose_x , pose_y , goal_x , goal_y):
@@ -79,50 +82,50 @@ class gtg_controller():
         if self.goal[0] - self.current_pose[0] >= 0:
 
             if self.goal[0] - self.current_pose[0] > 0.1:
-                self.vel_x.linear.x = 0.4 #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
-                print("away from goal in X_111111111111111111")
+                self.vel_x.linear.x = self.max_speed #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
+                # print("away from goal in X_111111111111111111")
             elif (self.goal[0] - self.current_pose[0]) <= 0.1 and (self.goal[0] - self.current_pose[0]) >= 0.005:
-                self.vel_x.linear.x = 4.0 * (self.goal[0] - self.current_pose[0])
-                print("getting close in X_11111111111")
+                self.vel_x.linear.x = self.max_speed_scaled * (self.goal[0] - self.current_pose[0])
+                # print("getting close in X_11111111111")
             else:    
                 self.vel_x.linear.x = 0.0
-                print("Give next goal in X_111111")
+                # print("Give next goal in X_111111")
                 self.reached_x = True
                    
         else:
             if self.goal[0] - self.current_pose[0] < -0.1:
-                self.vel_x.linear.x = -0.4 #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
-                print("away from goal in X_2222222222222")
+                self.vel_x.linear.x = -self.max_speed #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
+                # print("away from goal in X_2222222222222")
             elif (self.goal[0] - self.current_pose[0]) >= -0.1 and (self.goal[0] - self.current_pose[0]) <= -0.005:
-                self.vel_x.linear.x = 4.0 * (self.goal[0] - self.current_pose[0])
-                print("getting close in X_222222222222")
+                self.vel_x.linear.x = self.max_speed_scaled * (self.goal[0] - self.current_pose[0])
+                # print("getting close in X_222222222222")
             else:    
                 self.vel_x.linear.x = 0.0
-                print("Give next goal in X_2222222222")
+                # print("Give next goal in X_2222222222")
                 self.reached_x = True    
 
         if self.goal[1] - self.current_pose[1] >= 0:
-            if self.goal[1] - self.current_pose[1] > 0.01:
-                self.vel_y.linear.x = -0.4 #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
-                print("away from goal in Y_111111111111")
+            if self.goal[1] - self.current_pose[1] > 0.1:
+                self.vel_y.linear.x = -self.max_speed #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
+                # print("away from goal in Y_111111111111")
             elif (self.goal[1] - self.current_pose[1]) <= 0.1 and (self.goal[1] - self.current_pose[1]) >= 0.005:
-                self.vel_y.linear.x = -4.0 * ((self.goal[1] - self.current_pose[1]))
-                print("getting close in Y_111111111111")
+                self.vel_y.linear.x = -self.max_speed_scaled * ((self.goal[1] - self.current_pose[1]))
+                # print("getting close in Y_111111111111")
             else:    
                 self.vel_y.linear.x = -0.0  
-                print("give next goal in Y_11111111")
+                # print("give next goal in Y_11111111")
                 self.reached_y = True    
          
         else:
             if self.goal[1] - self.current_pose[1] < -0.1:
-                self.vel_y.linear.x = 0.4 #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
-                print("away from goal in Y_2222222222")
+                self.vel_y.linear.x = self.max_speed #0.1 may change, or to cover the path faster we can put constant 0.4 and when it reaches goal we can make it 0
+                # print("away from goal in Y_2222222222")
             elif (self.goal[1] - self.current_pose[1]) >= -0.1 and (self.goal[1] - self.current_pose[1]) <= -0.005:
-                self.vel_y.linear.x = -4.0 * ((self.goal[1] - self.current_pose[1]))
-                print("getting close in Y_222222222222")
+                self.vel_y.linear.x = -self.max_speed_scaled * ((self.goal[1] - self.current_pose[1]))
+                # print("getting close in Y_222222222222")
             else:    
                 self.vel_y.linear.x = -0.0  
-                print("give next goal in Y_22222222222222")
+                # print("give next goal in Y_22222222222222")
                 self.reached_y = True     
         
 
@@ -135,23 +138,24 @@ class gtg_controller():
         self.vel_x_pub.publish(self.vel_x)
         self.vel_y_pub.publish(self.vel_y)
         self.theta_pub.publish(self.current_pose[2])
-        print("x:" , self.current_pose[0])
-        print("y:" , self.current_pose[1])
-        print("theota:" , self.current_pose[2])     
+        # print("x:" , self.current_pose[0])
+        # print("y:" , self.current_pose[1])
+        # print("theota:" , self.current_pose[2])     
 
     def goal_pose_callback(self,msg):
         self.goal[0] = msg.dest_x_coordinate
         self.goal[1] = msg.dest_y_coordinate
         
         print("call_back recieved")
+        print("Goal location: (%f,%f)" % (self.goal[0], self.goal[1]))
         
         print("ready to go to desination")
 
         self.reached_x = False
         self.reached_y = False
-        while True:
-            self.control()
-            self.publishing_rate.sleep()
+        # while True:
+        #     self.control()
+        #     self.publishing_rate.sleep()
             
    
 if __name__ == "__main__":
@@ -163,10 +167,10 @@ if __name__ == "__main__":
 
     yo.goal[0] = float(args[1])
     yo.goal[1] = float(args[2])   
-    while True:
-            yo.control()
-            yo.publishing_rate.sleep()
-    rospy.spin()
+    while not rospy.is_shutdown():
+        yo.control()
+        yo.publishing_rate.sleep()
+    # rospy.spin()
     
 
 
