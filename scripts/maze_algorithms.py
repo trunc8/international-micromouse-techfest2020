@@ -21,7 +21,7 @@ import maze_solver
 class Maze:
   def __init__(self):
     # For debugging
-    # self.start_time = None
+    self.start_time = None
 
     # Maze parameters
     self.d = 0.012 # Wall thickness in m
@@ -33,7 +33,7 @@ class Maze:
     self.confidence_threshold = 10
     self.lower_thres = 0.2
     self.upper_thres = 0.8
-    self.center_precision = 0.05 # (metres)
+    self.center_precision = 0.04 # (metres)
 
     # Maze state and maze confidence matrices
     self.w = 2*self.N-1
@@ -47,6 +47,15 @@ class Maze:
 
     self.goal = None
     self.prev_goal = None
+
+    # Remember start position
+    self.start_pos = None
+    self.first_callback = True
+
+    # Switch between modes
+    self.run1 = True # Corner to center, exploratory run
+    self.run2 = False # Center to corner
+    self.run3 = False # Corner to center, final run
 
   def remap(self, t):
     '''
@@ -92,20 +101,22 @@ class Maze:
     Y = int(Y)
     
     # print("%f\t%f" % (X,Y))
-
-    if self.maze_confidence[X,Y] == -1:
-      rospy.logfatal("Trying to update non-updatable grid")
-      return
-
-    if (self.maze_confidence[X,Y] < self.confidence_threshold):
-      self.maze_confidence[X,Y] += 1
-      if (self.maze_confidence[X,Y] == self.confidence_threshold):
-        self.maze_state[X,Y] = 1
+    try:
+      if self.maze_confidence[X,Y] == -1:
+        rospy.logfatal("Trying to update non-updatable grid")
+        return
+    
+      if (self.maze_confidence[X,Y] < self.confidence_threshold):
+        self.maze_confidence[X,Y] += 1
+        if (self.maze_confidence[X,Y] == self.confidence_threshold):
+          self.maze_state[X,Y] = 1
+    except IndexError as error:
+      rospy.loginfo("IndexError on updating (%f,%f)" % (x,y))
 
  
   def mazeCallback(self, odom, scan):
     if (odom is not None and scan is not None):
-      rospy.loginfo("Update requested")
+      # rospy.loginfo("Update requested")
 
       # Extract robot's (x,y,theta) from /odom
       x_bot = odom.pose.pose.position.x
@@ -118,40 +129,87 @@ class Maze:
       rpy = tf.transformations.euler_from_quaternion(quaternion)
       theta_bot = rpy[2] - math.pi/2 # By default bot is facing -Y (East direction)
 
-      # Obtain (x,y) of laser end-points from /scan + /odom
-      laser_ranges = scan.ranges
-      no_of_points = len(laser_ranges)
-      max_range = scan.range_max   
+      if (self.run1 or self.run2):
+        # Obtain (x,y) of laser end-points from /scan + /odom
+        laser_ranges = scan.ranges
+        no_of_points = len(laser_ranges)
+        max_range = scan.range_max   
 
-      # print("Bot pose: (%f,%f,%f)" % (x_bot, y_bot, theta_bot*180/math.pi))
-      
-      for i in range(no_of_points):
-        angle = scan.angle_min + i*scan.angle_increment
-        radial_distance = laser_ranges[i]
-        if (radial_distance <= max_range): # Eliminate infinity ranges(idk if this is actually needed, for safety)
-          x_wall = x_bot + radial_distance*math.cos(theta_bot + angle)
-          y_wall = y_bot + radial_distance*math.sin(theta_bot + angle)
-          # print("Wall(laser): (%f,%f,%f)" % (x_wall, y_wall, (theta_bot + angle)*180/math.pi))
-          # rospy.signal_shutdown("Debug over")
-          # return
+        # print("Bot pose: (%f,%f,%f)" % (x_bot, y_bot, theta_bot*180/math.pi))
+        
+        for i in range(no_of_points):
+          angle = scan.angle_min + i*scan.angle_increment
+          radial_distance = laser_ranges[i]
+          if (radial_distance <= max_range): # Eliminate infinity ranges(idk if this is actually needed, for safety)
+            x_wall = x_bot + radial_distance*math.cos(theta_bot + angle)
+            y_wall = y_bot + radial_distance*math.sin(theta_bot + angle)
+            # print("Wall(laser): (%f,%f,%f)" % (x_wall, y_wall, (theta_bot + angle)*180/math.pi))
+            # rospy.signal_shutdown("Debug over")
+            # return
 
-          # print("Global: %f\t%f" % (x_wall, y_wall))
-          x_wall_remapped = self.remap(x_wall)
-          y_wall_remapped = self.remap(y_wall)
-          # print("[0,N]: %f\t%f" % (x_wall_remapped, y_wall_remapped))
+            # print("Global: %f\t%f" % (x_wall, y_wall))
+            x_wall_remapped = self.remap(x_wall)
+            y_wall_remapped = self.remap(y_wall)
+            # print("[0,N]: %f\t%f" % (x_wall_remapped, y_wall_remapped))
 
-          self.updateMazeConfidence(x_wall_remapped, y_wall_remapped)
+            self.updateMazeConfidence(x_wall_remapped, y_wall_remapped)
 
-      # Finding next point in bfs path
+      ## Breadth First Search
+
       # Coordinates in 16*16 representation
-      print("Bot pose: (%f,%f)" % (x_bot, y_bot))
+      # print("Bot pose: (%f,%f)" % (x_bot, y_bot))
       x_bot_remapped = self.remap(x_bot)
       y_bot_remapped = self.remap(y_bot)
+
       # Coordinates in 31*31 maze_state representation
       X = int(x_bot_remapped)*2
       Y = int(y_bot_remapped)*2
+      rospy.loginfo("Position: (%d,%d)" % (X, Y))
 
-      goal_ = maze_solver.BFS(self.maze_state, X, Y, 14, 14, self.w, self.h)
+      if self.first_callback:
+        self.start_pos = [X,Y]
+        self.start_time = rospy.get_time()
+        self.first_callback = False
+        # rospy.loginfo(self.start_pos)
+
+      # Finding next point in bfs path
+      if self.run1:
+        if X==14 and Y==14:
+          rospy.loginfo("Reached center(exploratory)!")
+          rospy.loginfo(rospy.get_time()-self.start_time)
+          rospy.signal_shutdown("Time period over")
+          return
+      #     self.start_time = rospy.get_time()
+      #     self.run1 = False
+      #     self.run2 = True
+        else:
+          goal_ = maze_solver.BFS(self.maze_state, X, Y, 14, 14, self.w, self.h)
+
+      
+      # if self.run2:
+      #   # rospy.loginfo("Going back to corner...")
+      #   if X==self.start_pos[0] and Y==self.start_pos[1]:
+      #     rospy.loginfo("Reached start corner")
+      #     rospy.loginfo(rospy.get_time()-self.start_time)
+      #     self.start_time = rospy.get_time()
+      #     self.run2 = False
+      #     self.run3 = True
+      #   else:
+      #     goal_ = maze_solver.BFS(self.maze_state, X, Y, self.start_pos[0], 
+      #                           self.start_pos[1], self.w, self.h)
+        
+      
+      # if self.run3:
+      #   if X==14 and Y==14:
+      #     rospy.loginfo("Reached center(final)!")
+      #     rospy.loginfo(rospy.get_time()-self.start_time)
+      #     rospy.signal_shutdown("Time period over")
+      #     return
+      #   else:
+      #     goal_ = maze_solver.BFS(self.maze_state, X, Y, 14, 14, self.w, self.h)
+        
+
+      # Oh no!
       if goal_ == -1:
         rospy.logfatal("Path not found!")
         return
@@ -168,10 +226,9 @@ class Maze:
           return
       
       self.prev_goal = self.goal[:]
-      print("Bot pose: (%d,%d)" % (X, Y))
-      print("Goal: (%d,%d)" % (goal_[0],goal_[1]))
-      print("Goal: (%f,%f)" % (self.goal[0],self.goal[1]))
-      # rospy.loginfo(self.goal)
+      # print("Bot pose: (%d,%d)" % (X, Y))
+      # print("Goal: (%d,%d)" % (goal_[0],goal_[1]))
+      # print("Goal: (%f,%f)" % (self.goal[0],self.goal[1]))
 
 
       # if (rospy.get_time()-self.start_time) > 70:
@@ -185,7 +242,7 @@ if __name__ == '__main__':
   try:
     rospy.init_node('maze_algorithms_node')#, disable_signals=True)
     maze_obj = Maze()
-    maze_obj.start_time = rospy.get_time()
+    # maze_obj.start_time = rospy.get_time()
     while (rospy.get_time()==0): # Wait until nodes have loaded completely
       pass
     
@@ -203,7 +260,7 @@ if __name__ == '__main__':
     dest_pub = rospy.Publisher('/dest', dest, queue_size=1)
     loop_rate = rospy.Rate(1)
     while not rospy.is_shutdown():
-      rospy.loginfo("Running")
+      # rospy.loginfo("Running")
       if maze_obj.goal is not None:
         msg = dest()
         msg.dest_x_coordinate = maze_obj.goal[0]

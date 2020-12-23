@@ -10,6 +10,9 @@ from std_msgs.msg import Float64
 from pkg_techfest_imc.msg import dest
 import sys
 
+# import config
+# import maze_algorithms
+
 class gtg_controller():
     def __init__(self):
         rospy.init_node("go_to_goal_controller")
@@ -52,12 +55,12 @@ class gtg_controller():
 
         self.publishing_rate = rospy.Rate(20)
 
-        self.max_speed_y = 0.05
-        self.max_speed_x = 0.11
+        self.max_speed_y = 0.15
+        self.max_speed_x = 0.15
         self.max_speed_scaled_x = self.max_speed_x*10
         self.max_speed_scaled_y = self.max_speed_y*10
-        self.min_thresh = 0.01 #if distance to goal is btw 0.05 and 0.01, then p controller is used to prevent overshoot
-        self.max_thresh = 0.1  #min distance upto which the speed given to the bot is 0.4
+        self.min_thresh = 0.005 #if distance to goal is btw 0.05 and 0.01, then p controller is used to prevent overshoot
+        self.max_thresh = 0.05  #min distance upto which the speed given to the bot is 0.4
         self.init_current_pose = [0.0 , 0.0 ,0.0]
 
     def odom_callback(self,msg):
@@ -161,11 +164,6 @@ class gtg_controller():
         print("Goal location: (%f,%f)" % (self.goal[0], self.goal[1]))
         
         print("ready to go to desination")
-
-        
-        # while True:
-        #     self.control()
-        #     self.publishing_rate.sleep()
             
    
 if __name__ == "__main__":
@@ -176,11 +174,13 @@ if __name__ == "__main__":
         sys.exit()
 
     yo.goal[0] = float(args[1])
-    yo.goal[1] = float(args[2])   
+    yo.goal[1] = float(args[2])
     while not rospy.is_shutdown():
+        # if config.run_number != 1:
+        #     yo.max_speed_x = 0.15
+        #     yo.max_speed_y = 0.15
         yo.control()
         yo.publishing_rate.sleep()
-    # rospy.spin()
     
 
 
