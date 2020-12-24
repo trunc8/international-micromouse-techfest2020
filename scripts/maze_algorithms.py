@@ -11,6 +11,7 @@ from nav_msgs.msg import Odometry
 from pkg_techfest_imc.msg import dest
 import rospy
 from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Int32
 import tf
 
 import math
@@ -53,9 +54,10 @@ class Maze:
     self.first_callback = True
 
     # Switch between modes
-    self.run1 = True # Corner to center, exploratory run
-    self.run2 = False # Center to corner
-    self.run3 = False # Corner to center, final run
+    self.run_number = Int32()
+    self.run_number.data = 1
+    self.run_number_pub = rospy.Publisher('/run_number', Int32, queue_size=1)
+    self.run_number_pub.publish(self.run_number)
 
   def remap(self, t):
     '''
@@ -111,7 +113,8 @@ class Maze:
         if (self.maze_confidence[X,Y] == self.confidence_threshold):
           self.maze_state[X,Y] = 1
     except IndexError as error:
-      rospy.loginfo("IndexError on updating (%f,%f)" % (x,y))
+      # rospy.loginfo("IndexError on updating (%f,%f)" % (x,y))
+      pass
 
  
   def mazeCallback(self, odom, scan):
@@ -129,7 +132,7 @@ class Maze:
       rpy = tf.transformations.euler_from_quaternion(quaternion)
       theta_bot = rpy[2] - math.pi/2 # By default bot is facing -Y (East direction)
 
-      if (self.run1 or self.run2):
+      if self.run_number != 1:
         # Obtain (x,y) of laser end-points from /scan + /odom
         laser_ranges = scan.ranges
         no_of_points = len(laser_ranges)
@@ -172,46 +175,38 @@ class Maze:
         self.first_callback = False
         # rospy.loginfo(self.start_pos)
 
-      # Finding next point in bfs path
-      if self.run1:
+      ## Finding next point in bfs path
+      if self.run_number.data % 2:
+        # Odd numbered run
+        # rospy.loginfo("From corner to center...")
         if X==14 and Y==14:
           rospy.loginfo("Reached center(exploratory)!")
           rospy.loginfo(rospy.get_time()-self.start_time)
-          rospy.signal_shutdown("Time period over")
+          # rospy.signal_shutdown("Time period over")
+          self.start_time = rospy.get_time()
+          self.run_number.data += 1
+          self.run_number_pub.publish(self.run_number)
           return
-      #     self.start_time = rospy.get_time()
-      #     self.run1 = False
-      #     self.run2 = True
         else:
           goal_ = maze_solver.BFS(self.maze_state, X, Y, 14, 14, self.w, self.h)
 
-      
-      # if self.run2:
-      #   # rospy.loginfo("Going back to corner...")
-      #   if X==self.start_pos[0] and Y==self.start_pos[1]:
-      #     rospy.loginfo("Reached start corner")
-      #     rospy.loginfo(rospy.get_time()-self.start_time)
-      #     self.start_time = rospy.get_time()
-      #     self.run2 = False
-      #     self.run3 = True
-      #   else:
-      #     goal_ = maze_solver.BFS(self.maze_state, X, Y, self.start_pos[0], 
-      #                           self.start_pos[1], self.w, self.h)
-        
-      
-      # if self.run3:
-      #   if X==14 and Y==14:
-      #     rospy.loginfo("Reached center(final)!")
-      #     rospy.loginfo(rospy.get_time()-self.start_time)
-      #     rospy.signal_shutdown("Time period over")
-      #     return
-      #   else:
-      #     goal_ = maze_solver.BFS(self.maze_state, X, Y, 14, 14, self.w, self.h)
-        
+      else:
+        # rospy.loginfo("Going back to corner...")
+        if X==self.start_pos[0] and Y==self.start_pos[1]:
+          rospy.loginfo("Reached start corner")
+          rospy.loginfo(rospy.get_time()-self.start_time)
+          self.start_time = rospy.get_time()
+          self.run_number.data += 1
+          self.run_number_pub.publish(self.run_number)
+          return
+        else:
+          goal_ = maze_solver.BFS(self.maze_state, X, Y, self.start_pos[0], 
+                                self.start_pos[1], self.w, self.h)
 
       # Oh no!
       if goal_ == -1:
         rospy.logfatal("Path not found!")
+        rospy.signal_shutdown("Too fast")
         return
       
 
@@ -258,6 +253,7 @@ if __name__ == '__main__':
     
     rospy.loginfo("Creating publisher...")
     dest_pub = rospy.Publisher('/dest', dest, queue_size=1)
+    
     loop_rate = rospy.Rate(1)
     while not rospy.is_shutdown():
       # rospy.loginfo("Running")

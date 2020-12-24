@@ -10,8 +10,7 @@ from std_msgs.msg import Float64
 from pkg_techfest_imc.msg import dest
 import sys
 
-# import config
-# import maze_algorithms
+from std_msgs.msg import Int32
 
 class gtg_controller():
     def __init__(self):
@@ -23,6 +22,7 @@ class gtg_controller():
         self.theta_pub = rospy.Publisher("/theota" , Float32 , queue_size = 1)
         rospy.Subscriber('/odom', Odometry , self.odom_callback)
         rospy.Subscriber('/dest' , dest , self.goal_pose_callback , queue_size = 1 , buff_size = 40)
+        rospy.Subscriber('/run_number', Int32 , self.run_number_callback)
         self.ack_pub = rospy.Publisher('/acknowledge', Float32 , queue_size=1)
 
         #self.prev_goal = [0.0 , 0.0]
@@ -62,6 +62,11 @@ class gtg_controller():
         self.min_thresh = 0.005 #if distance to goal is btw 0.05 and 0.01, then p controller is used to prevent overshoot
         self.max_thresh = 0.05  #min distance upto which the speed given to the bot is 0.4
         self.init_current_pose = [0.0 , 0.0 ,0.0]
+
+        self.run_number = 1
+
+    def run_number_callback(self, msg):
+        self.run_number = msg.data
 
     def odom_callback(self,msg):
         self.current_pose[0] = msg.pose.pose.position.x
@@ -154,16 +159,16 @@ class gtg_controller():
         self.theta_pub.publish(self.current_pose[2])
         # print("x:" , self.current_pose[0])
         # print("y:" , self.current_pose[1])
-        # print("theota:" , self.current_pose[2])     
+        # print("theota:" , self.current_pose[2])
 
     def goal_pose_callback(self,msg):
         self.goal[0] = msg.dest_x_coordinate
         self.goal[1] = msg.dest_y_coordinate
         
-        print("call_back recieved")
+        # print("call_back recieved")
         print("Goal location: (%f,%f)" % (self.goal[0], self.goal[1]))
         
-        print("ready to go to desination")
+        # print("ready to go to desination")
             
    
 if __name__ == "__main__":
@@ -175,10 +180,12 @@ if __name__ == "__main__":
 
     yo.goal[0] = float(args[1])
     yo.goal[1] = float(args[2])
+
+    max_speed = 0.07
     while not rospy.is_shutdown():
-        # if config.run_number != 1:
-        #     yo.max_speed_x = 0.15
-        #     yo.max_speed_y = 0.15
+        print("Current speed: %f" % yo.max_speed_x)
+        yo.max_speed_x = max_speed + 0.03*(yo.run_number//2)
+        yo.max_speed_y = max_speed + 0.03*(yo.run_number//2)
         yo.control()
         yo.publishing_rate.sleep()
     
