@@ -8,10 +8,8 @@
   <arg name="debug" default="false"/>
   <arg name="model" default="$(find pkg_techfest_imc)/urdf/micromouse_robot.xacro"/>
   <arg name="extra_gazebo_args" default="--verbose"/>
-  <!-- <arg name="initial_position_micromouse_x" default="0"/> -->
-  <!-- <arg name="initial_position_micromouse_y" default="0"/>  -->
-  <arg name="initial_position_micromouse_x" default="-1.354"/>
-  <arg name="initial_position_micromouse_y" default="1.238"/>	
+  <arg name="initial_position_micromouse_x" default="-1.35"/>
+  <arg name="initial_position_micromouse_y" default="1.35"/>	
 	
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -31,6 +29,8 @@
   <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model"
         args="-x $(arg initial_position_micromouse_x) -y $(arg initial_position_micromouse_y) -z 0.08 -unpause -urdf -model robot -param robot_description" respawn="false" output="screen" />
 
-  <node name="micromouse_centerline" pkg="pkg_techfest_imc" type="micromouse_gtg_centerline.py" output="screen" args="$(arg initial_position_micromouse_x) $(arg initial_position_micromouse_y)"/>
+  <node name="micromouse_centerline" pkg="pkg_techfest_imc" type="micromouse_gtg_centerline.py" args="$(arg initial_position_micromouse_x) $(arg initial_position_micromouse_y)"/>
+
+  <node name="maze_algorithms" pkg="pkg_techfest_imc" type="maze_algorithms.py" output="screen" />
 
 </launch>

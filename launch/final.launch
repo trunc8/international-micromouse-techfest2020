@@ -2,7 +2,13 @@
 
 <launch>
 
-  <include file = "$(find pkg_techfest_imc)/launch/gazebo.launch" />
+  <arg name="initial_position_micromouse_x" default="-1.35"/>
+  <arg name="initial_position_micromouse_y" default="1.35"/> 
+
+  <include file = "$(find pkg_techfest_imc)/launch/gazebo.launch">
+    <arg name="initial_position_micromouse_x" value="$(arg initial_position_micromouse_x)"/>
+    <arg name="initial_position_micromouse_y" value="$(arg initial_position_micromouse_y)"/>
+  </include>
 
   <include file = "$(find pkg_techfest_imc)/launch/rviz.launch" />
 
